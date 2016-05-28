@@ -1,6 +1,5 @@
 package be.nabu.eai.module.types.xml;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.List;
@@ -12,28 +11,26 @@ import be.nabu.eai.repository.managers.base.TypeRegistryManager;
 import be.nabu.libs.resources.ResourceReadableContainer;
 import be.nabu.libs.resources.api.ReadableResource;
 import be.nabu.libs.resources.api.Resource;
-import be.nabu.libs.types.xml.XMLSchema;
 import be.nabu.libs.validator.api.Validation;
 import be.nabu.utils.io.IOUtils;
 import be.nabu.utils.io.api.ByteBuffer;
 import be.nabu.utils.io.api.ReadableContainer;
 
-public class XMLSchemaManager extends TypeRegistryManager<XMLSchema> {
+public class XMLSchemaManager extends TypeRegistryManager<XMLSchemaArtifact> {
 
 	public XMLSchemaManager() {
-		super(XMLSchema.class);
+		super(XMLSchemaArtifact.class);
 	}
 
 	@Override
-	public XMLSchema load(ResourceEntry entry, List<Validation<?>> messages) throws IOException, ParseException {
+	public XMLSchemaArtifact load(ResourceEntry entry, List<Validation<?>> messages) throws IOException, ParseException {
 		Resource resource = entry.getContainer().getChild("schema.xsd");
 		if (resource == null) {
-			throw new FileNotFoundException("Can not find schema.xsd");
+			return new XMLSchemaArtifact(entry.getId(), entry.getContainer(), entry.getRepository());
 		}
 		ReadableContainer<ByteBuffer> readable = new ResourceReadableContainer((ReadableResource) resource);
 		try {
-			XMLSchema schema = new XMLSchema(IOUtils.toInputStream(readable));
-			schema.setId(entry.getId());
+			XMLSchemaArtifact schema = new XMLSchemaArtifact(IOUtils.toInputStream(readable), entry.getId(), entry.getContainer(), entry.getRepository());
 			schema.setResolver(new EntryResourceResolver(entry));
 			schema.parse();
 			return schema;
