@@ -17,6 +17,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.TypeRegistryGUIManager;
+import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
@@ -65,27 +66,30 @@ public class XMLSchemaGUIManager extends TypeRegistryGUIManager<XMLSchemaArtifac
 			listFiles(files, privateDirectory);
 		}
 
-		Button setFiles = new Button("Set XSD");
+		Button setFiles = new Button("Set XSDs");
 		setFiles.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@SuppressWarnings({ "unchecked", "rawtypes" })
 			@Override
 			public void handle(ActionEvent arg0) {
-				SimpleProperty<File> mainProperty = new SimpleProperty<File>("Main XSD file", File.class, true);
-				SimpleProperty<File> zipProperty = new SimpleProperty<File>("XSD support files zip", File.class, false);
+				SimpleProperty<File> mainProperty = new SimpleProperty<File>("XSD file or zip file", File.class, true);
 				mainProperty.setInput(true);
-				zipProperty.setInput(true);
 				Set properties = new LinkedHashSet(Arrays.asList(new Property [] {
-					mainProperty,
-					zipProperty
+					mainProperty
 				}));
 				final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties);
 				EAIDeveloperUtils.buildPopup(MainController.getInstance(), updater, "Set XML Schema's", new EventHandler<ActionEvent>() {
 					@Override
 					public void handle(ActionEvent event) {
-						File xsdFile = updater.getValue("Main XSD file");
-						File zipFile = updater.getValue("XSD support files zip");
+						File xsdFile = updater.getValue("XSD file or zip file");
 						if (xsdFile != null) {
 							try {
+								ResourceContainer<?> privateDirectory = (ResourceContainer<?>) artifact.getContainer().getChild(EAIResourceRepository.PRIVATE);
+								// always delete the private directory if we upload a new main scheme
+								if (privateDirectory != null) {
+									((ManageableContainer<?>) artifact.getContainer()).delete(EAIResourceRepository.PRIVATE);
+								}
+								privateDirectory = (ResourceContainer<?>) ((ManageableContainer<?>) artifact.getContainer()).create(EAIResourceRepository.PRIVATE, Resource.CONTENT_TYPE_DIRECTORY);
+								files.getItems().clear();
 								if (xsdFile.isFile() && xsdFile.getName().endsWith(".xsd")) {
 									Container<ByteBuffer> wrap = IOUtils.wrap(xsdFile);
 									try {
@@ -100,22 +104,37 @@ public class XMLSchemaGUIManager extends TypeRegistryGUIManager<XMLSchemaArtifac
 										finally {
 											writable.close();
 										}
+										ResourceUtils.copy(resource, (ManageableContainer<?>) privateDirectory, xsdFile.getName());
+										listFiles(files, privateDirectory);
 									}
 									finally {
 										wrap.close();
 									}
-									ResourceContainer<?> privateDirectory = (ResourceContainer<?>) artifact.getContainer().getChild(EAIResourceRepository.PRIVATE);
-									// always delete the private directory if we upload a new main scheme
-									if (privateDirectory != null) {
-										((ManageableContainer<?>) artifact.getContainer()).delete(EAIResourceRepository.PRIVATE);
-									}
-									files.getItems().clear();
-									if (zipFile != null && zipFile.isFile() && zipFile.getName().endsWith(".zip")) {
-										privateDirectory = (ResourceContainer<?>) ((ManageableContainer<?>) artifact.getContainer()).create(EAIResourceRepository.PRIVATE, Resource.CONTENT_TYPE_DIRECTORY);
-										ResourceUtils.unzip(new FileItem(null, zipFile, false), privateDirectory);
-										listFiles(files, privateDirectory);
-									}
 									reload(artifact);
+								}
+								else if (xsdFile.isFile() && xsdFile.getName().endsWith(".zip")) {
+									ResourceUtils.unzip(new FileItem(null, xsdFile, false), privateDirectory);
+									listFiles(files, privateDirectory);
+									EnumeratedSimpleProperty<String> mainProperty = new EnumeratedSimpleProperty<String>("Main XSD file", String.class, true);
+									mainProperty.addEnumeration(files.getItems());
+									final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet(Arrays.asList(new Property [] {	mainProperty })));
+									EAIDeveloperUtils.buildPopup(MainController.getInstance(), updater, "Select main XSD", new EventHandler<ActionEvent>() {
+										@Override
+										public void handle(ActionEvent arg0) {
+											String main = updater.getValue("Main XSD file");
+											if (main != null) {
+												ResourceContainer<?> privateDirectory = (ResourceContainer<?>) artifact.getContainer().getChild(EAIResourceRepository.PRIVATE);
+												try {
+													Resource source = ResourceUtils.resolve(privateDirectory, main);
+													ResourceUtils.copy(source, (ManageableContainer<?>) artifact.getContainer(), "schema.xsd", false, true);
+													reload(artifact);
+												}
+												catch (IOException e) {
+													throw new RuntimeException(e);
+												}
+											}
+										}
+									});
 								}
 							}
 							catch (IOException e) {
