@@ -182,8 +182,8 @@ public class XMLSchemaGUIManager extends TypeRegistryGUIManager<XMLSchemaArtifac
 			// trigger refresh in tree
 			TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(artifact.getId().replace('.', '/'));
 			if (resolve != null) {
-				resolve.getParent().refresh();
-				resolve.refresh();
+//				resolve.getParent().refresh();
+				MainController.getInstance().getTree().getTreeCell(resolve).refresh();
 				MainController.getInstance().getRepository().reload(artifact.getId());
 				MainController.getInstance().getTree().getTreeCell(resolve.getParent()).refresh();
 			}
