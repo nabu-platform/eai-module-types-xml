@@ -14,6 +14,7 @@ public class XMLSchemaArtifact extends XMLSchema {
 
 	private ResourceContainer<?> container;
 	private Repository repository;
+	private XMLSchemaConfiguration configuration;
 
 	public XMLSchemaArtifact(String id, ResourceContainer<?> container, Repository repository) {
 		super((Document) null);
@@ -37,4 +38,11 @@ public class XMLSchemaArtifact extends XMLSchema {
 		return repository;
 	}
 
+	public XMLSchemaConfiguration getConfiguration() {
+		return configuration;
+	}
+
+	public void setConfiguration(XMLSchemaConfiguration configuration) {
+		this.configuration = configuration;
+	}
 }

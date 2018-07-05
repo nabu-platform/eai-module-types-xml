@@ -150,8 +150,15 @@ public class XMLSchemaGUIManager extends TypeRegistryGUIManager<XMLSchemaArtifac
 		box.getStyleClass().add("buttons");
 		box.getChildren().addAll(setFiles);
 		
+		if (artifact.getConfiguration() == null) {
+			artifact.setConfiguration(new XMLSchemaConfiguration());
+		}
+		SimplePropertyUpdater createUpdater = EAIDeveloperUtils.createUpdater(artifact.getConfiguration(), null);
+		AnchorPane properties = new AnchorPane();
+		MainController.getInstance().showProperties(createUpdater, properties, true);
+		
 		VBox vbox = new VBox();
-		vbox.getChildren().addAll(box, files);
+		vbox.getChildren().addAll(box, files, properties);
 		pane.getChildren().add(vbox);
 		
 		AnchorPane.setLeftAnchor(vbox, 0d);
